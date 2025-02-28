@@ -1,10 +1,10 @@
-name: pnpsci
+name: pnpsci2
 channels:
   - conda-forge
   - pytorch
   - defaults
 dependencies:
-  - python=3.13.2
+  - python=3.11.11
   - cudatoolkit=11.0
   - torchvision
   - pytorch
