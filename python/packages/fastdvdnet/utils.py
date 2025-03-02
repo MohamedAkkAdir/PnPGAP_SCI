@@ -1,15 +1,6 @@
 """
 Different utilities such as orthogonalization of weights, initialization of
 loggers, etc
-
-Copyright (C) 2019, Matias Tassano <matias.tassano@parisdescartes.fr>
-
-This program is free software: you can use, modify and/or
-redistribute it under the terms of the GNU General Public
-License as published by the Free Software Foundation, either
-version 3 of the License, or (at your option) any later
-version. You should have received a copy of this license along
-this program. If not, see <http://www.gnu.org/licenses/>.
 """
 import os
 import subprocess
@@ -19,13 +10,12 @@ from random import choices # requires Python >= 3.6
 import numpy as np
 import cv2
 import torch
-from skimage.metrics import peak_signal_noise_ratio as compare_psnr
-# from skimage.metrics import peak_signal_noise_ratio
+from skimage.measure.simple_metrics import compare_psnr
 from tensorboardX import SummaryWriter
 
 IMAGETYPES = ('*.bmp', '*.png', '*.jpg', '*.jpeg', '*.tif') # Supported image types
 
-def normalize_augment(datain, ctrl_fr_idx, gray_mode=False):
+def normalize_augment(datain, ctrl_fr_idx):
 	'''Normalizes and augments an input patch of dim [N, num_frames, C. H, W] in [0., 255.] to \
 		[N, num_frames*C. H, W] in  [0., 1.]. It also returns the central frame of the temporal \
 		patch as a ground truth.
@@ -62,9 +52,6 @@ def normalize_augment(datain, ctrl_fr_idx, gray_mode=False):
 		return transf[0](sample)
 
 	img_train = datain
-	# GRAY = 0.2989 * R + 0.5870 * G + 0.1140 * B 
-	if gray_mode:
-		img_train = 0.2989*img_train[:,:,0,:,:] + 0.5870*img_train[:,:,1,:,:] + 0.1140*img_train[:,:,2,:,:]
 	# convert to [N, num_frames*C. H, W] in  [0., 1.] from [N, num_frames, C. H, W] in [0., 255.]
 	img_train = img_train.view(img_train.size()[0], -1, \
 							   img_train.size()[-2], img_train.size()[-1]) / 255.
@@ -72,9 +59,8 @@ def normalize_augment(datain, ctrl_fr_idx, gray_mode=False):
 	#augment
 	img_train = transform(img_train)
 
-	C = 1 if gray_mode else 3
 	# extract ground truth (central frame)
-	gt_train = img_train[:, ctrl_fr_idx*C:ctrl_fr_idx*C+C, :, :]
+	gt_train = img_train[:, 3*ctrl_fr_idx:3*ctrl_fr_idx+3, :, :]
 	return img_train, gt_train
 
 def init_logging(argdict):
@@ -129,13 +115,12 @@ def open_sequence(seq_dir, gray_mode, expand_if_needed=False, max_num_fr=100):
 		img, expanded_h, expanded_w = open_image(fpath,\
 												   gray_mode=gray_mode,\
 												   expand_if_needed=expand_if_needed,\
-												   expand_axis0=False,\
-												   tile_axis0=True)
+												   expand_axis0=False)
 		seq_list.append(img)
-		seq = np.stack(seq_list, axis=0)
+	seq = np.stack(seq_list, axis=0)
 	return seq, expanded_h, expanded_w
 
-def open_image(fpath, gray_mode, expand_if_needed=False, expand_axis0=True, tile_axis0=True, normalize_data=True):
+def open_image(fpath, gray_mode, expand_if_needed=False, expand_axis0=True, normalize_data=True):
 	r""" Opens an image and expands it if necesary
 	Args:
 		fpath: string, path of image file
@@ -152,15 +137,13 @@ def open_image(fpath, gray_mode, expand_if_needed=False, expand_axis0=True, tile
 		expanded_w: True if original dim W was odd and image got expanded in this dimension.
 	"""
 	if not gray_mode:
-		# Open image as a [H,W,C] torch.Tensor
+		# Open image as a CxHxW torch.Tensor
 		img = cv2.imread(fpath)
-		# from [H,W,C] to [C,H,W], RGB image
+		# from HxWxC to CxHxW, RGB image
 		img = (cv2.cvtColor(img, cv2.COLOR_BGR2RGB)).transpose(2, 0, 1)
 	else:
-		# from [H,W] to [H,W,C] grayscale image (C=1)
-		img = cv2.imread(fpath, cv2.IMREAD_GRAYSCALE) # [H,W] from cv2
-		# expand dimensions from [H,W] to [C,H,W] (C=1)
-		img = np.expand_dims(img, 0) 
+		# from HxWxC to  CxHxW grayscale image (C=1)
+		img = cv2.imread(fpath, cv2.IMREAD_GRAYSCALE)
 
 	if expand_axis0:
 		img = np.expand_dims(img, 0)
@@ -208,11 +191,8 @@ def batch_psnr(img, imclean, data_range):
 	imgclean = imclean.data.cpu().numpy().astype(np.float32)
 	psnr = 0
 	for i in range(img_cpu.shape[0]):
-		# psnr += compare_psnr(imgclean[i, :, :, :], img_cpu[i, :, :, :], \
-		# 			   data_range=data_range)
-		psnr += compare_psnr(imgclean[i], img_cpu[i], \
+		psnr += compare_psnr(imgclean[i, :, :, :], img_cpu[i, :, :, :], \
 					   data_range=data_range)
-
 	return psnr/img_cpu.shape[0]
 
 def variable_to_cv2_image(invar, conv_rgb_to_bgr=True):
@@ -343,7 +323,7 @@ def svd_orthogonalization(lyr):
 			mat_u, _, mat_v = torch.svd(weights)
 			weights = torch.mm(mat_u, mat_v.t())
 
-			lyr.weight.data = weights.view(f1, f2, c_in, c_out).permute(3, 2, 0, 1).type(dtype)
+			lyr.weight.data = weights.view(f1, f2, c_in, c_out).permute(3, 2, 0, 1).contiguous().type(dtype)
 		except:
 			pass
 	else:

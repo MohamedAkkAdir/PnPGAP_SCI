@@ -1,8 +1,6 @@
 #!/bin/sh
 """
 Denoise all the sequences existent in a given folder using FastDVDnet.
-
-@author: Matias Tassano <mtassano@parisdescartes.fr>
 """
 import os
 import argparse
@@ -10,9 +8,9 @@ import time
 import cv2
 import torch
 import torch.nn as nn
-from .models import FastDVDnet
-from .fastdvdnet import fastdvdnet_seqdenoise, denoise_seq_fastdvdnet
-from .utils import batch_psnr, init_logger_test, \
+from models import FastDVDnet
+from fastdvdnet import denoise_seq_fastdvdnet
+from utils import batch_psnr, init_logger_test, \
 				variable_to_cv2_image, remove_dataparallel_wrapper, open_sequence, close_logger
 
 NUM_IN_FR_EXT = 5 # temporal size of patch
@@ -44,7 +42,7 @@ def save_out_seq(seqnoisy, seqclean, save_dir, sigmaval, suffix, save_noisy):
 		cv2.imwrite(out_name, outimg)
 
 def test_fastdvdnet(**args):
-	r"""Denoises all sequences present in a given folder. Sequences must be stored as numbered
+	"""Denoises all sequences present in a given folder. Sequences must be stored as numbered
 	image sequences. The different sequences must be stored in subfolders under the "test_path" folder.
 
 	Inputs:
@@ -78,7 +76,7 @@ def test_fastdvdnet(**args):
 	model_temp = FastDVDnet(num_input_frames=NUM_IN_FR_EXT)
 
 	# Load saved weights
-	state_temp_dict = torch.load(args['model_file'])
+	state_temp_dict = torch.load(args['model_file'], map_location=device)
 	if args['cuda']:
 		device_ids = [0]
 		model_temp = nn.DataParallel(model_temp, device_ids=device_ids).cuda()
@@ -97,26 +95,17 @@ def test_fastdvdnet(**args):
 									expand_if_needed=False,\
 									max_num_fr=args['max_num_fr_per_seq'])
 		seq = torch.from_numpy(seq).to(device)
-		# seq_time = time.time() # original starter
+		seq_time = time.time()
 
-		if args['noisy_input']:
-			seqn, _, _ = open_sequence('%s_sigma%d'%(args['test_path'],args['noise_sigma']*255),\
-									args['gray'],\
-									expand_if_needed=False,\
-									max_num_fr=args['max_num_fr_per_seq'])
-			seqn = torch.from_numpy(seqn).to(device)
-		else:
-			# Add noise
-			noise = torch.empty_like(seq).normal_(mean=0, std=args['noise_sigma']).to(device)
-			seqn = seq + noise
-
+		# Add noise
+		noise = torch.empty_like(seq).normal_(mean=0, std=args['noise_sigma']).to(device)
+		seqn = seq + noise
 		noisestd = torch.FloatTensor([args['noise_sigma']]).to(device)
 
-		seq_time = time.time() # modified starter
 		denframes = denoise_seq_fastdvdnet(seq=seqn,\
 										noise_std=noisestd,\
-										windsize=NUM_IN_FR_EXT,\
-										model=model_temp)
+										temp_psz=NUM_IN_FR_EXT,\
+										model_temporal=model_temp)
 
 	# Compute PSNR and log it
 	stop_time = time.time()
@@ -132,73 +121,12 @@ def test_fastdvdnet(**args):
 
 	# Save outputs
 	if not args['dont_save_results']:
-		if args['gray']:
-			denframes = torch.mean(denframes,dim=-3)
 		# Save sequence
 		save_out_seq(seqn, denframes, args['save_path'], \
 					   int(args['noise_sigma']*255), args['suffix'], args['save_noisy'])
 
 	# close logger
 	close_logger(logger)
-
-def fastdvdnet_denoiser(vnoisy, sigma, model=None, useGPU=True, gray=False):
-	r"""Denoise an input video (H x W x F x C for color video, and H x W x F for
-	     grayscale video) with FastDVDnet
-	"""
-	# start_time = time.time()
-	nColor = 1 if gray else 3 # number of color channels (3 - RGB color, 1 - grayscale)
-	# Sets data type according to CPU or GPU modes
-	if useGPU:
-		device = torch.device('cuda')
-	else:
-		device = torch.device('cpu')
-
-	if model is None:
-		model = FastDVDnet(num_input_frames=NUM_IN_FR_EXT, num_color_channels=nColor)
-
-		# Load saved weights
-		if gray:
-			state_temp_dict = torch.load('model_gray.pth') # [pre-trained] model for grayscale videos
-		else:
-			state_temp_dict = torch.load('model.pth') # [pre-trained] model for color videos
-		if useGPU:
-			device_ids = [0]
-			model = nn.DataParallel(model, device_ids=device_ids).cuda()
-		else:
-			# CPU mode: remove the DataParallel wrapper
-			state_temp_dict = remove_dataparallel_wrapper(state_temp_dict)
-		model.load_state_dict(state_temp_dict)
-
-	# Sets the model in evaluation mode (e.g. it removes BN)
-	model.eval()
-
-	with torch.no_grad():
-		# vnoisy = vnoisy.transpose((2,3,0,1)) # [do it in torch] from H x W x F x C to F x C x H x W
-		vnoisy = torch.from_numpy(vnoisy).type('torch.FloatTensor').to(device)
-		noisestd = torch.FloatTensor([sigma]).to(device)
-
-		if gray:
-			vnoisy = vnoisy.unsqueeze(3) # unsqueeze the color dimension - [H,W,F] to [H,W,F,C=1]
-		vnoisy = vnoisy.permute(2, 3, 0, 1) # from H x W x F x C to F x C x H x W 
-		# print(vnoisy.finfo, noisestd.finfo)
-
-		# print(torch.max(vnoisy),torch.min(vnoisy))
-		# vnoisy = torch.clamp(vnoisy,0.,1.)
-		outv = fastdvdnet_seqdenoise( seq=vnoisy,\
-									  noise_std=noisestd,\
-									  windsize=NUM_IN_FR_EXT,\
-									  model=model )
-		# print(outv.shape)
-		# print(torch.max(outv),torch.min(outv))
-		outv = outv.permute(2, 3, 0, 1) # back from F x C x H x W to H x W x F x C
-		if gray:
-			outv = outv.squeeze(3) # squeeze the color dimension - [H,W,F,C=1] to [H,W,F]
-		outv = outv.data.cpu().numpy()
-		# outv = outv.transpose((2,3,0,1)) # [do it in torch] back from F x C x H x W to H x W x F x C
-
-	# stop_time = time.time()
-	# print('    FastDVDnet video denoising eclipsed in {:.3f}s.'.format(stop_time-start_time))
-	return outv
 
 if __name__ == "__main__":
 	# Parse arguments
@@ -212,8 +140,6 @@ if __name__ == "__main__":
 	parser.add_argument("--max_num_fr_per_seq", type=int, default=25, \
 						help='max number of frames to load per sequence')
 	parser.add_argument("--noise_sigma", type=float, default=25, help='noise level used on test set')
-	parser.add_argument("--noisy_input", action='store_true', help='with noisy images as input')
-
 	parser.add_argument("--dont_save_results", action='store_true', help="don't save output images")
 	parser.add_argument("--save_noisy", action='store_true', help="save noisy frames")
 	parser.add_argument("--no_gpu", action='store_true', help="run model on CPU")
