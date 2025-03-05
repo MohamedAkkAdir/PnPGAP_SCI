@@ -24,6 +24,10 @@ In google colabe:
 3. Install the required packages via  
 `!pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118`
 `!pip install matplotlib jupyterlab h5py tifffile tensorboardX scikit-image scipy opencv-python colour-science colour_demosaicing`
+5. Clone the project via  
+`!git clone https://github.com/MohamedAkkAdir/PnPGAP_SCI.git`
+6. Change the directory to the project directory via  
+`%cd PnPGAP_SCI`
 4. Open the notebook `pnp_sci_video.ipynb` and run the code cell by cell.
 5. [Optional] Explore more with the main algorithm code `pnp_sci_algo.py`.
 
