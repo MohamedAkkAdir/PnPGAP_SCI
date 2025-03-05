@@ -6,23 +6,30 @@ This repository contains the Python (PyTorch) code for the paper **Plug-and-play
 
 The initial Python code for GAP-TV was from [Dr. Xin Yuan](https://www.bell-labs.com/usr/x.yuan) on Aug 7, 2018.
 
-***Note that some of the results revealed in this Python implementation have not been published yet. So please do not distribute this pre-release code.***
 
 ## How to run this code
-This code is tested on Ubuntu 18.04 LTS with CUDA 10.1, CuDNN 7.6.4, and PyTorch 1.4.0/1.5.1. It is supposed to work on other platforms (Linux or Windows) with CUDA-enabled GPU(s). 
+This code is tested on Google colab with CUDA-enabled GPU enabled. It is supposed to work on other platforms (Linux or Windows) with CUDA-enabled GPU(s). 
 
 We use [conda](https://www.anaconda.com/distribution/) to manage the virtual environment and Python packages.
 
-0. Install conda from the Anaconda Distribution https://www.anaconda.com/distribution/ according to the platform.
-1. Create the virtual environment with required Python packages via  
-`conda env create -f environment.yml`
-2. Run a demo test with the benchmark grayscale `kobe` data via  
-`python pnp_sci_video_kobe.py`
-3. [Optional] Explore more with the Python Notebook `pnp_sci_video.ipynb` and the main algorithm code `pnp_sci_algo.py`.
-4. [Optional] For the color data, please refer to the script `deep_vprior_sci_traffic` and the Python Notebook `deep_vprior_sci.ipynb`.
+In google colabe:
+
+0. Install conda from the conda-forge channel via:
+`!pip install -q condacolab`
+`import condacolab`
+`condacolab.install()`
+1. Create the virtual environment and then activate it via  
+`!conda create --name pnpnsci python=3.11`
+`!source activate pnpnsci`
+3. Install the required packages via  
+`!pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118`
+`!pip install matplotlib jupyterlab h5py tifffile tensorboardX scikit-image scipy opencv-python colour-science colour_demosaicing`
+4. Open the notebook `pnp_sci_video.ipynb` and run the code cell by cell.
+5. [Optional] Explore more with the main algorithm code `pnp_sci_algo.py`.
+
 
 ## Acknowledgements
-We adopt several image and video denoisers as video priors (under the `./packages/` directory). The `ffdnet` package is from the (unofficial) PyTorch implementation of [FFDNet, TIP'18](https://doi.org/10.1109/TIP.2018.2839891) at https://doi.org/10.5201/ipol.2019.231 (An official PyTorch implementation of FFDNet was out just recently at https://github.com/cszn/KAIR. We believe they should work similarly with respect to the reconstruction process). The `vnlnet` package is from the PyTorch implementation of [VNLnet](https://arxiv.org/abs/1811.12758) at https://github.com/axeldavy/vnlnet. The `fastdvdnet` package is from the PyTorch implementation of [FastDVDnet](https://arxiv.org/abs/1907.01361) at https://github.com/m-tassano/fastdvdnet.
+We adopt several image and video denoisers as video priors (under the `./packages/` directory). The `ffdnet` package is from the (unofficial) PyTorch implementation of [FFDNet, TIP'18](https://doi.org/10.1109/TIP.2018.2839891) at https://doi.org/10.5201/ipol.2019.231 (An official PyTorch implementation of FFDNet was out just recently at https://github.com/cszn/KAIR. We believe they should work similarly with respect to the reconstruction process). The `fastdvdnet` package is from the PyTorch implementation of [FastDVDnet](https://arxiv.org/abs/1907.01361) at https://github.com/m-tassano/fastdvdnet.
 
 ## Citation
 ```
