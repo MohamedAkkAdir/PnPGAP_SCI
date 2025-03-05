@@ -14,6 +14,8 @@ We use [conda](https://www.anaconda.com/distribution/) to manage the virtual env
 
 In google colab:
 
+Note: Don't forget to enable GPU acceleration in Google Colab.
+
 0. Open the notebook `pnp_sci_demo.ipynb` in Google Colab via the link : [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/MohamedAkkAdir/PnPGAP_SCI/blob/main/pnp_sci_demo.ipynb)
 1. follow the instructions in the notebook.
 2. [Optional] Explore more with the main algorithm code `pnp_sci_algo.py`.
