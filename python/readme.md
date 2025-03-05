@@ -12,24 +12,11 @@ This code is tested on Google colab with CUDA-enabled GPU enabled. It is suppose
 
 We use [conda](https://www.anaconda.com/distribution/) to manage the virtual environment and Python packages.
 
-In google colabe:
+In google colab:
 
-0. Install conda from the conda-forge channel via:
-`!pip install -q condacolab`
-`import condacolab`
-`condacolab.install()`
-1. Create the virtual environment and then activate it via  
-`!conda create --name pnpnsci python=3.11`
-`!source activate pnpnsci`
-3. Install the required packages via  
-`!pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118`
-`!pip install matplotlib jupyterlab h5py tifffile tensorboardX scikit-image scipy opencv-python colour-science colour_demosaicing`
-5. Clone the project via  
-`!git clone https://github.com/MohamedAkkAdir/PnPGAP_SCI.git`
-6. Change the directory to the project directory via  
-`%cd PnPGAP_SCI`
-7. Open the notebook `pnp_sci_video.ipynb` and run the code cell by cell.
-8. [Optional] Explore more with the main algorithm code `pnp_sci_algo.py`.
+0. Open the notebook `pnp_sci_demo.ipynb` in Google Colab via the link : [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/MohamedAkkAdir/PnPGAP_SCI/blob/main/pnp_sci_demo.ipynb)
+1. follow the instructions in the notebook.
+2. [Optional] Explore more with the main algorithm code `pnp_sci_algo.py`.
 
 
 ## Acknowledgements
